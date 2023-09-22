@@ -10,6 +10,7 @@ public class InputStreamSource implements CharSource {
     private final BufferedReader in;
     private int current;
     private int pos;
+    private final int END = -1;
 
     public InputStreamSource(final InputStream in, final Charset charset) throws IOException {
         this.in = new BufferedReader(new InputStreamReader(in, charset));
@@ -27,7 +28,7 @@ public class InputStreamSource implements CharSource {
 
     @Override
     public boolean hasNext() {
-        return current != -1;
+        return current != END;
     }
 
     @Override

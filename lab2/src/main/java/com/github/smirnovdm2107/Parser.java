@@ -3,6 +3,7 @@ package com.github.smirnovdm2107;
 import com.github.smirnovdm2107.source.InputStreamSource;
 import com.github.smirnovdm2107.source.token.NumberToken;
 import com.github.smirnovdm2107.source.token.SimpleToken;
+import com.github.smirnovdm2107.source.token.Token;
 import com.github.smirnovdm2107.source.token.VariableToken;
 
 import java.io.IOException;
@@ -15,83 +16,130 @@ public class Parser {
     public Tree parse(final InputStream inputStream) throws IOException, ParseException {
         return new Helper(inputStream).parse();
     }
+
     private static final class Helper {
         private final LexicalAnalyzer lexer;
 
-        public Helper(final InputStream inputStream) throws IOException {
+        public Helper(final InputStream inputStream) throws IOException, ParseException {
             lexer = new LexicalAnalyzer(new InputStreamSource(inputStream));
         }
 
-        public Helper(final InputStream inputStream, final Charset charset) throws IOException {
+        public Helper(final InputStream inputStream, final Charset charset) throws IOException, ParseException {
             lexer = new LexicalAnalyzer(new InputStreamSource(inputStream, charset));
+        }
 
+        public Tree expectSimpleToken(final SimpleToken token) throws ParseException {
+            if (lexer.currentToken() == token) {
+                lexer.nextToken();
+                return new Tree(token.name());
+            }
+            throw new AssertionError("expected " + token.name() + ", found " + lexer.currentToken());
+        }
+
+        public Tree expectVariableToken() throws ParseException {
+            if (lexer.currentToken() instanceof VariableToken) {
+                return new Tree("V", new Tree(((VariableToken) lexer.nextToken()).value()));
+            }
+            throw new AssertionError("expected variable token, found "
+                    + lexer.currentToken());
+        }
+
+        public Tree expectNumberToken() throws ParseException {
+            if (lexer.currentToken() instanceof NumberToken) {
+                return new Tree("N", new Tree(((NumberToken) lexer.nextToken()).value().toString()));
+            }
+            throw new AssertionError("expected number token, found "
+                    + lexer.currentToken());
         }
 
         private Tree A() throws ParseException {
-            final VariableToken type  = lexer.nextVariableTokenIf(ch -> ch == ';');
-            if (type == null) {
-                return new Tree("B");
+            final Tree tree = new Tree("A");
+            final Token current = lexer.currentToken();
+            if (current instanceof VariableToken) {
+                return tree.addChild(expectVariableToken())
+                        .addChild(expectVariableToken())
+                        .addChild(expectSimpleToken(SimpleToken.EQ))
+                        .addChild(expectNumberToken());
+            } else if (current == SimpleToken.SEMICOLON) {
+                return tree;
             }
-            lexer.nextVariableToken();
-            expectNextSimple(SimpleToken.EQ);
-            lexer.nextNumberToken();
-            return new Tree("B", new Tree("V"), new Tree("V"), new Tree("N"));
+            throw new AssertionError();
         }
 
         private Tree B() throws ParseException {
-            final VariableToken var = lexer.nextVariableTokenIf(it -> it != ';');
-            if (var == null) {
-                return new Tree("C");
+            final Tree tree = new Tree("B");
+            final Token current = lexer.currentToken();
+            if (current instanceof VariableToken) {
+                return tree.addChild(expectVariableToken())
+                        .addChild(Z())
+                        .addChild(expectNumberToken());
+            } else if (current == SimpleToken.SEMICOLON) {
+                return tree;
             }
-            final Tree z = Z();
-            final NumberToken number = lexer.nextNumberToken();
-            return new Tree("C", z, new Tree("N"));
+            throw new AssertionError();
         }
 
         private Tree Z() throws ParseException {
-            final SimpleToken token = lexer.nextSimpleToken();
-            if (token != SimpleToken.EQ && token != SimpleToken.GT && token != SimpleToken.LT) {
-                throw new AssertionError();
+            final Tree tree = new Tree("Z");
+            final Token current = lexer.currentToken();
+            if (current == SimpleToken.EQ) {
+                return tree.addChild(expectSimpleToken(SimpleToken.EQ))
+                        .addChild(expectSimpleToken(SimpleToken.EQ));
+            } else if (current == SimpleToken.LT || current == SimpleToken.GT) {
+                return tree.addChild(expectSimpleToken((SimpleToken) current))
+                        .addChild(E());
             }
-            return new Tree("Z", new Tree(token.name()), E());
+            throw new AssertionError();
         }
 
         private Tree E() throws ParseException {
-            final SimpleToken token = lexer.nextSimpleTokenIf(it -> it == '=');
-            if (token == null) {
-                return new Tree("E");
+            final Token current = lexer.currentToken();
+            final Tree tree = new Tree("E");
+            if (current == SimpleToken.EQ) {
+                return tree.addChild(expectSimpleToken(SimpleToken.EQ));
+            } else if (current instanceof NumberToken) {
+                return tree;
             }
-            return new Tree("E", new Tree(SimpleToken.EQ.name()));
-        }
-        private Tree C() throws ParseException {
-            final VariableToken var = lexer.nextVariableTokenIf(it -> it != ')');
-            if (var == null) {
-                return new Tree("C");
-            }
-            final SimpleToken token = lexer.nextSimpleToken();
-            if (token != SimpleToken.INC && token != SimpleToken.DEC) {
-                throw new AssertionError();
-            }
-            return new Tree("C", new Tree("V"), new Tree(token.name()));
+            throw new AssertionError();
         }
 
-        private Tree expectNextSimple(final SimpleToken token) throws ParseException {
-            if (lexer.nextSimpleToken() != token) {
-                throw new AssertionError();
+        private Tree C() throws ParseException {
+            final Token current = lexer.currentToken();
+            final Tree tree = new Tree("C");
+            if (current instanceof VariableToken) {
+                return tree.addChild(expectVariableToken())
+                        .addChild(O());
+            } else if (current == SimpleToken.RP) {
+                return tree;
             }
-            return new Tree(token.name());
+            throw new AssertionError();
+        }
+
+        private Tree O() throws ParseException {
+            final Token current = lexer.currentToken();
+            final Tree tree = new Tree("O");
+            if (current == SimpleToken.INC) {
+                return tree.addChild(expectSimpleToken(SimpleToken.INC));
+            } else if (current == SimpleToken.DEC) {
+                return tree.addChild(expectSimpleToken(SimpleToken.DEC));
+            }
+            throw new AssertionError();
         }
 
         private Tree S() throws ParseException {
-            final Tree token_for = expectNextSimple(SimpleToken.FOR);
-            final Tree left_paren = expectNextSimple(SimpleToken.LP);
-            final Tree a = A();
-            final Tree semicolon1 = expectNextSimple(SimpleToken.SEMICOLON);
-            final Tree b = B();
-            final Tree semicolon2 = expectNextSimple(SimpleToken.SEMICOLON);
-            final Tree c = C();
-            final Tree right_paren = expectNextSimple(SimpleToken.RP);
-            return new Tree("S", token_for, left_paren, a, semicolon1, b, semicolon2, c, right_paren);
+            final Tree tree = new Tree(
+                    "S",
+                    expectSimpleToken(SimpleToken.FOR),
+                    expectSimpleToken(SimpleToken.LP),
+                    A(),
+                    expectSimpleToken(SimpleToken.SEMICOLON),
+                    B(),
+                    expectSimpleToken(SimpleToken.SEMICOLON),
+                    C(),
+                    expectSimpleToken(SimpleToken.RP)
+            );
+            lexer.expect(SimpleToken.END);
+            return tree;
         }
 
         public Tree parse() throws ParseException {

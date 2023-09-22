@@ -1,5 +1,6 @@
-package com.github.smirnovdm2107;
+package com.github.smirnovdm2107.grammar;
 
+import com.github.smirnovdm2107.GrammarAnalyzer;
 import com.github.smirnovdm2107.grammar.Grammar;
 
 import java.util.List;

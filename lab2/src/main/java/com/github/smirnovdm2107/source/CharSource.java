@@ -4,7 +4,7 @@ import java.io.IOException;
 import java.nio.charset.Charset;
 
 /**
- * Interface that represent not empty char sequence generator
+ * Interface that represent char sequence generator
  */
 public interface CharSource extends AutoCloseable {
 

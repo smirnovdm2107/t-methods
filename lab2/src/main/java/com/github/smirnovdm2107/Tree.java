@@ -1,5 +1,6 @@
 package com.github.smirnovdm2107;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -8,7 +9,7 @@ public class Tree {
     private final List<Tree> children;
     public Tree(final String node, final Tree... children) {
         this.node = node;
-        this.children = Arrays.asList(children);
+        this.children = new ArrayList<>(Arrays.asList(children));
     }
 
     public String getNode() {
@@ -21,7 +22,16 @@ public class Tree {
 
     public Tree(final String node) {
         this.node = node;
-        children = List.of();
+        children = new ArrayList<>();
     }
 
+    @Override
+    public int hashCode() {
+        return super.hashCode();
+    }
+
+    public Tree addChild(final Tree child) {
+        children.add(child);
+        return this;
+    }
 }
