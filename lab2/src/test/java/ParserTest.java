@@ -4,34 +4,49 @@ import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
 
-public class ParserTest {
+class ParserTest {
 
+    /*
+        Test empty input.
+     */
     @Test
-    public void testEmpty() {
+    void testEmpty() {
         test("", true);
     }
 
+    /*
+        Just normal case.
+     */
     @Test
-    public void testNormal() {
+    void testNormal() {
         test("for (int i = 0; i < 10; i++)", false);
     }
 
+    /*
+        Testing variables.
+     */
     @Test
-    public void testVariable() {
+    void testVariable() {
         test ("for (int i = 0; i < 10; i++)", false);
         test ("for (int aaaaaaaaaaaaaaa = 0; aaaaaaaaaaaaaa < 10; aaaaaaaaaaaaa++)", false);
         test("for (int a0 = 0; a0 < 10; a0++)", false);
         test("for (int 0a = 0; 0a < 10; 0a++", true);
     }
 
+    /*
+        Testing number.
+     */
     @Test
-    public void testNumber() {
+    void testNumber() {
         test("for (int i = 0; i < 10.0; i++)", false);
         test("for (int i = a; i < b; i++)", true);
     }
 
+    /*
+        Testing comparison.
+     */
     @Test
-    public void testCompare() {
+    void testCompare() {
         test ("for (int i = 0; i < 10; i++)", false);
         test ("for (int i = 0; i <= 10; i++)", false);
         test ("for (int i = 0; i > 10; i++)", false);
@@ -39,8 +54,11 @@ public class ParserTest {
         test ("for (int i = 0; i <=> 10; i++)", true);
     }
 
+    /*
+        Testing operation.
+     */
     @Test
-    public void testInc() {
+    void testInc() {
         test("for (int i = 0; i < 10; i++)", false);
         test("for (int i = 0; i < 10; i--)", false);
         test("for (int i = 0 ; i < 10; i+)", true);
@@ -48,8 +66,11 @@ public class ParserTest {
         test("for (int i = 0; i < 10; i&&)", true);
     }
 
+    /*
+        Testing missing element of for statement.
+     */
     @Test
-    public void testMissing() {
+    void testMissing() {
         // missing for
         test("( int i = 0; i < 10; i++)", true);
         // missing type
@@ -90,8 +111,11 @@ public class ParserTest {
         test("for (;;)", false);
     }
 
+    /*
+        Testing spaces.
+     */
     @Test
-    public void testSpaces() {
+    void testSpaces() {
         test("for            (int i = 0; i < 10; i++)", false);
         test("for (int i = 0; i < 10; i++)          ", false);
         test("for (int             i          =    0       ; i < 10; i++)", false);
@@ -100,7 +124,7 @@ public class ParserTest {
         test("        for         (          int    i        =   0   ;   i    <    10  ;  i ++   )  ", false);
 
     }
-
+    
 
     public void test(final String source, final boolean shouldFail) {
         try {

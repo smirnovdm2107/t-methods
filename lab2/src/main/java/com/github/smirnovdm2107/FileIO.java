@@ -28,8 +28,6 @@ public class FileIO {
     private record Edge(int from, int to) {
     }
 
-    ;
-
     private static Set<Edge> saveTree(final Tree tree, final BufferedWriter out) throws IOException {
         final Set<Edge> edges = new HashSet<>();
         saveTree(tree, out, edges, 0);
@@ -37,11 +35,11 @@ public class FileIO {
     }
 
     private static int saveTree(final Tree tree, final BufferedWriter out, final Set<Edge> edges, final int currentId) throws IOException {
+        out.write(String.format("a%d[label=\"%s\"]", currentId, tree.getNode()));
+        out.newLine();
         int childId = currentId + 1;
         for (final Tree child : tree.getChildren()) {
-            out.write(String.format("a%d[label=\"%s\"]", childId, child.getNode()));
             edges.add(new Edge(currentId, childId));
-            out.newLine();
             childId = saveTree(child, out, edges, childId);
         }
         return childId;
