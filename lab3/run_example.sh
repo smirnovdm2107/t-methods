@@ -1,0 +1,1 @@
+./run.sh Example.java Example_obf.java
