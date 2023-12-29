@@ -1,7 +1,5 @@
 package com.github.smirnovdm2107.config.source;
 
-import com.github.smirnovdm2107.config.source.CharSource;
-
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -9,10 +7,11 @@ import java.io.InputStreamReader;
 import java.nio.charset.Charset;
 
 public class InputStreamSource implements CharSource {
+    private static final int READ_AHEAD_LIMIT = 4096;
     private final BufferedReader in;
     private int current;
     private int pos;
-    private static final int END = -1;
+    private int markedCurrent = -1;
 
     public InputStreamSource(final InputStream in, final Charset charset) throws IOException {
         this.in = new BufferedReader(new InputStreamReader(in, charset));
@@ -24,8 +23,8 @@ public class InputStreamSource implements CharSource {
     }
 
     @Override
-    public char current() {
-        return (char) current;
+    public int current() {
+        return current;
     }
 
     @Override
@@ -35,16 +34,22 @@ public class InputStreamSource implements CharSource {
 
     @Override
     public void mark() throws IOException {
-        in.mark(1024);
+        in.mark(READ_AHEAD_LIMIT);
+        markedCurrent = current;
     }
 
     @Override
     public void reset() throws IOException {
         in.reset();
+        current = markedCurrent;
+        markedCurrent = -1;
     }
 
     @Override
-    public char next() throws IOException {
+    public int next() throws IOException {
+        if (current == -1) {
+            return END;
+        }
         final char result = (char) current;
         pos++;
         current = in.read();

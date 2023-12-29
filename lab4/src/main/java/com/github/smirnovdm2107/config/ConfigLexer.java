@@ -1,61 +1,129 @@
 package com.github.smirnovdm2107.config;
 
 import com.github.smirnovdm2107.config.source.CharSource;
+import com.github.smirnovdm2107.util.ConfigUtils;
 
 import java.io.IOException;
 import java.text.ParseException;
+import java.util.function.Predicate;
 
 public class ConfigLexer {
     private final CharSource source;
-    private static final String LINE_SEPARATOR = System.lineSeparator();
 
-    private  static final int END = -1;
+    private static final int END = -1;
     public ConfigLexer(final CharSource source) {
         this.source = source;
     }
 
+    private ConfigToken currentToken;
+
+    public ConfigToken currentToken() throws IOException, ParseException {
+        if (currentToken == null) {
+            currentToken = nextToken();
+        }
+        return currentToken;
+    }
 
 
     public ConfigToken nextToken() throws IOException, ParseException {
+        if (currentToken != null) {
+            final ConfigToken result = currentToken;
+            currentToken = null;
+            return result;
+        }
         skipWhitespaces();
         if (take(';')) {
-            return new ConfigToken(ConfigTokenType.SEMICOLON, ";");
+            return ConfigToken.SEMICOLON;
         } else if (take(':')) {
-            return new ConfigToken(ConfigTokenType.COLON, ":");
+            return ConfigToken.COLON;
         } else if (take('|')) {
-            return new ConfigToken(ConfigTokenType.OR, "|");
+            return ConfigToken.OR;
         } else if (take("grammar")) {
-            return new ConfigToken(ConfigTokenType.GRAMMAR, "grammar");
+            return ConfigToken.GRAMMAR;
+        } else if (take("returns")) {
+            return ConfigToken.RETURNS;
         } else if (take('*')){
-            return new ConfigToken(ConfigTokenType.MANY, "*");
+            return ConfigToken.MANY;
         } else if (take('+')) {
-            return new ConfigToken(ConfigTokenType.SOME, "+");
+            return ConfigToken.SOME;
         } else if (take('(')) {
-            return new ConfigToken(ConfigTokenType.LP, "(");
+            return ConfigToken.LP;
         } else if (take(')')) {
-            return new ConfigToken(ConfigTokenType.RP, ")");
+            return ConfigToken.RP;
+        } else if (take('?')) {
+            return ConfigToken.OPTIONAL;
+        } else if (take('[')) {
+            return ConfigToken.LB;
+        } else if (take(']')) {
+            return ConfigToken.RB;
+        } else if (take(',')) {
+            return ConfigToken.COMMA;
+        }
+        if (!source.hasNext()) {
+            return ConfigToken.EOF;
         }
         final StringBuilder result = new StringBuilder();
         if (take('\'')) {
-            while(!take('\'')) {
+            while (!take('\'')) {
                 if (source.current() == '\\') {
-                    source.next();
+                    next();
                 }
-                result.append(source.next());
+                result.append(next());
             }
-            return new ConfigToken(ConfigTokenType.STRING, result.toString());
+            return ConfigToken.stringOf(result.toString());
+        }
+        source.mark();
+        char ch1 = next();
+        if (!take('-')) {
+            source.reset();
         } else {
-            // TODO
-            expect('[');
-            result.append('[');
-            if (take('^')) {
-                result.append(']');
+            final char ch2 = next();
+            if (Character.isWhitespace(ch2)) {
+                source.reset();
+            } else {
+                return ConfigToken.rangeOf(String.valueOf(ch1) + '-' + ch2);
             }
         }
-        // TODO
-        throw new RuntimeException();
+        if (test(Character::isLowerCase)) {
+            return ConfigToken.lowerCaseIdentifierOf(takeIdentifier());
+        } else if (test(Character::isUpperCase)) {
+            return ConfigToken.upperCaseIdentifierOf(takeIdentifier());
+        } else if (take('{')) {
+            int balance = 1;
+            while (current() != '}' || balance != 1) {
+                char ch = next();
+                result.append(ch);
+                if (ch == '{') {
+                    balance++;
+                } else if (ch == '}') {
+                    balance--;
+                }
+            }
+            next();
+            return ConfigToken.codeBlockOf(result.toString());
+        }
+        throw new ParseException("unexpected character: " + current(), currentPos());
     }
 
+    private char next() throws IOException {
+        return (char) source.next();
+    }
+
+    private char current() {
+        return (char) source.current();
+    }
+    private String takeIdentifier() throws IOException {
+        final StringBuilder sb = new StringBuilder();
+        while(source.hasNext() &&
+                (Character.isLetterOrDigit(current())
+                 || current() == '_' || current() == '-' )) {
+            sb.append(next());
+        }
+        return sb.toString();
+    }
+    private boolean test(final Predicate<Character> predicate) {
+        return predicate.test((char) source.current());
+    }
     private boolean take(final String string) throws IOException {
         source.mark();
         for (int i = 0; i < string.length(); i++) {
@@ -75,7 +143,7 @@ public class ConfigLexer {
     }
 
     private boolean take(final char ch) throws IOException {
-        if (source.current() == ch) {
+        if (source.current() != ch) {
             return false;
         }
         source.next();
@@ -83,22 +151,9 @@ public class ConfigLexer {
     }
 
     private void skipWhitespaces() throws IOException {
-        while (true) {
-            while (Character.isWhitespace(source.current())) {
-                source.next();
-            }
-            boolean breaked = false;
-            source.mark();
-            for (int i = 0; i < LINE_SEPARATOR.length(); i++) {
-                if (source.current() != LINE_SEPARATOR.charAt(i)) {
-                    source.reset();
-                    breaked = true;
-                    break;
-                }
-            }
-            if (breaked) {
-                break;
-            }
-        }
+        ConfigUtils.skipWhitespaces(source);
+    }
+    public int currentPos() {
+        return source.currentPos();
     }
 }

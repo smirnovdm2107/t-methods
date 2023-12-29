@@ -2,22 +2,26 @@ package com.github.smirnovdm2107.config.source;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 
 /**
  * Interface that represent char sequence generator
  */
 public interface CharSource extends AutoCloseable {
 
+    int END = -1;
+
     /**
      * Default charset to get char sequence from byte one.
      */
-    Charset DEFAULT_CHARSET = Charset.defaultCharset();
+    Charset DEFAULT_CHARSET = StandardCharsets.UTF_8;
 
     /**
      * Then if {@link #next()} has been called - returned char, else - first element of sequence.
      * @return current char sequence element.
      */
-    char current();
+
+    int current();
 
     int currentPos();
 
@@ -32,9 +36,11 @@ public interface CharSource extends AutoCloseable {
      * must return next element, else undefined behavior.
      * @return next element from char sequence
      */
-    char next() throws IOException;
+
+    int next() throws IOException;
 
     void mark() throws IOException;
 
     void reset() throws IOException;
+
 }
