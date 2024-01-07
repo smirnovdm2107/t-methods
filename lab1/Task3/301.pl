@@ -1,14 +1,16 @@
 use strict;
 my $k = 0;
 my $count = 0;
-foreach my $line (<STDIN>) {
-    if (!($line =~ /^ *$/)) {
-        if ($k && $count > 0) {
+foreach (<STDIN>) {
+    if (!(/^\s*$/)) {
+        if ($k > 0 && $count > 0) {
             print "\n";
         }
-        $line =~ s/^( *)(.*)( *)$/\2/;
-        $line =~ s/ {2,}/ /g;
-        print $line;
+        s/\s*$//g;
+        s/^\s*//g;
+        s/\s{2,}/ /g;
+        print;
+        print "\n";
         $k = 1;
         $count = 0;
     } else {
