@@ -67,24 +67,24 @@ public class BaseTest {
         }
     }
 
-    protected String mathConfig = """
+    protected String FULL_MATH = """
             grammar 'math_grammar';
-            e: e PLUS t {$0.val = $1.val + $3.val;};
-            e: e MINUS t {$0.val = $1.val - $3.val;};
-            e: t {$0.val = $1.val;};
-            t: t MUL f {$0.val = $1.val * $3.val;};
-            t: t DIV f {$0.val = $1.val / $3.val;};
-            t: f {$0.val = $1.val;};
+            e returns [int val]: e PLUS t {$0.val = $1.val + $3.val;};
+            e returns [int val]: e MINUS t {$0.val = $1.val - $3.val;};
+            e returns [int val]: t {$0.val = $1.val;};
+            t returns [int val]: t MUL f {$0.val = $1.val * $3.val;};
+            t returns [int val]: t DIV f {if ($3.val == 0) $0.val = $1.val; else $0.val = $1.val / $3.val;};
+            t returns [int val]: f {$0.val = $1.val;};
             
-            f: NUM {$1.val = Integer.parseInteger($1.text);};
-            f: LP e RP {$0.val = $2.val;};
+            f returns [int val]: NUM {$0.val = Integer.parseInt($1.text);};
+            f returns [int val]: LP e RP {$0.val = $2.val;};
             
+            NUM: '-'?[0-9]+;
             RP: ')';
             LP: '(';
             MINUS: '-';
             DIV: '/';
             MUL: '*';
             PLUS: '+';
-            NUM: '-'?[0-9]*;
             """;
 }

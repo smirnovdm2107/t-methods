@@ -64,6 +64,9 @@ public class AttributeCodeRunner {
     }
 
     public void run(final ParserRule rule, List<Context> contexts) {
+        if (rule.codeBlock() == null) {
+            return;
+        }
         try {
             object.getClass().getMethod(parserRuleMethodNameMap.get(rule), List.class).invoke(
                     object, contexts

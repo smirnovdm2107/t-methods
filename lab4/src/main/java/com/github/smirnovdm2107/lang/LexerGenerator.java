@@ -33,6 +33,7 @@ public class LexerGenerator {
 
     private class PatternLexer implements Lexer {
         private static final int MAX_ID_LENGTH = 2048;
+        private boolean isEnded = false;
         private final CharSource source;
         private Token current;
 
@@ -55,7 +56,12 @@ public class LexerGenerator {
             }
             skipWhitespaces();
             if (!source.hasNext()) {
-                return Token.EOF;
+                if (!isEnded) {
+                    isEnded = true;
+                    return Token.EOF;
+                } else {
+                    throw new IllegalStateException("eof");
+                }
             }
             source.mark();
             final StringBuilder sb = new StringBuilder();
@@ -79,7 +85,7 @@ public class LexerGenerator {
                     }
                 }
             }
-            throw new ParseException("unexpected token", source.currentPos());
+            throw new ParseException("unexpected token" + current(), source.currentPos());
         }
 
 

@@ -1,0 +1,27 @@
+
+grammar 'lab3grammar';
+
+s: FOR LP a SEMICOLON b SEMICOLON c RP;
+a: VAR VAR EQ NUM;
+a: EPS;
+b: VAR z NUM;
+z: DOUBLE_EQ;
+z: LESS_THAN e;
+z: GREATER_THAN e;
+e: EQ;
+c: VAR op;
+op: INC;
+op: DEC;
+
+FOR: 'for';
+NUM: '-'?[0-9]+;
+VAR: [a-z]+;
+SEMICOLON: ';';
+INC: '++';
+DEC: '--';
+GREATER_THAN: '>';
+LESS_THAN: '<';
+DOUBLE_EQ: '==';
+EQ: '=';
+LP: '(';
+RP: ')';

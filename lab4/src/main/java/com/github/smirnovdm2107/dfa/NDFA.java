@@ -14,6 +14,8 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import javax.security.auth.Subject;
+
 import com.github.smirnovdm2107.GrammarAnalyzer;
 import com.github.smirnovdm2107.config.Config;
 import com.github.smirnovdm2107.config.LexerRule;
@@ -30,10 +32,6 @@ public class NDFA {
     public ParserRule FINAL_RULE;
 
     private final GrammarAnalyzer analyzer;
-
-    private final Set<Situation> situations = new HashSet<>();
-
-    private final Set<State> states = new HashSet<>();
 
     private State startState;
 
@@ -53,67 +51,48 @@ public class NDFA {
                 0, FINAL_RULE, Set.of(LexerRule.EOF)
         );
         this.parserRules.add(startSituation.rule);
-        for (final ParserRule rule: this.parserRules) {
-            for (int i = 0; i < rule.rules().size() + 1; i++) {
-                final Situation situation = new Situation(i, rule, new HashSet<>());
-                situations.add(situation);
-            }
-        }
-        final ArrayDeque<State> deque = new ArrayDeque<>();
-        startState = new State(eps(Set.of(startSituation)), new HashMap<>());
-        deque.addLast(startState);
-        while (!deque.isEmpty()) {
-            final State current = deque.removeFirst();
-            if (states.contains(current)) {
-                continue;
-            }
-            states.add(current);
-            final Map<String, List<Situation>> by = current.situations.stream()
-                    .filter(it -> it.getCurrent() != null)
-                    .collect(Collectors.groupingBy(Situation::getCurrent));
-
-            for (final Map.Entry<String, List<Situation>> entry: by.entrySet()) {
-                final Set<Situation> nextSituations = entry.getValue().stream()
-                        .map(Situation::increase)
-                        .collect(Collectors.toSet());
-                final State newState = new State(eps(nextSituations), new HashMap<>());
-                if (states.contains(newState)) {
-                    continue;
-                }
-                current.map.put(entry.getKey(), newState);
-                deque.addLast(newState);
-            }
-        }
+        startState = new State(eps(Set.of(startSituation)));
     }
 
     private Set<Situation> eps(Set<Situation> s) {
-        final Set<Situation> result = new HashSet<>();
-        final Deque<Situation> rest = new ArrayDeque<>(s);
-
-        while (!rest.isEmpty()) {
-            final Situation situation = rest.removeFirst();
-            if (result.contains(situation)) {
-                continue;
-            }
-            result.add(situation);
-            if (situation.getCurrent() != null && !isLexerRule(situation.getCurrent())) {
-                final Collection<Situation> current = this.situations.stream().filter(it ->
-                    it.index == 0 && it.rule.name().equals(situation.getCurrent())
-                ).toList();
-                final List<String> tail = situation.getTail();
-                final Collection<LexerRule> first = new ArrayList<>();
-                for (final LexerRule la: situation.lookAhead) {
+        final Set<Situation> result = new HashSet<>(s);
+        boolean changed = true;
+        while (changed) {
+            changed = false;
+            final Map<SituationCore, Situation> next = result.stream()
+                    .collect(Collectors.toMap(it -> new SituationCore(it.index, it.rule), Function.identity()));
+            for (final Situation situation: result) {
+                if (situation.getCurrent() != null && !isLexerRule(situation.getCurrent())) {
+                    final Collection<ParserRule> current = this.parserRules.stream().filter(it ->
+                            it.name().equals(situation.getCurrent())
+                    ).toList();
+                    final List<String> tail = situation.getTail();
+                    final Set<LexerRule> first = new HashSet<>();
                     final List<String> subRule = new ArrayList<>(tail);
-                    subRule.add(la.name());
-                    first.addAll(analyzer.first(subRule));
-                }
-                first.addAll(situation.lookAhead());
-                for (final Situation subSituation: current) {
-                    subSituation.lookAhead.addAll(first.stream().distinct().toList());
-                    rest.add(subSituation);
+                    for (final LexerRule la : situation.lookAhead) {
+                        subRule.add(la.name());
+                        first.addAll(analyzer.first(subRule));
+                        subRule.clear();
+                        subRule.addAll(tail);
+                    }
+
+                    for (final ParserRule rule: current) {
+                        final Situation newSituation = new Situation(0, rule, new HashSet<>(first));
+                        if (next.containsKey(newSituation.core())) {
+                            next.get(newSituation.core()).lookAhead.addAll(first);
+                        } else {
+                            next.put(newSituation.core(), newSituation);
+                        }
+                    }
                 }
             }
-
+            final int prev = result.size();
+            result.addAll(next.values());
+            if (prev != result.size()) {
+                changed = true;
+            }
+            next.clear();
+            next.putAll(result.stream().collect(Collectors.toMap(it -> it.core(), Function.identity())));
         }
         return result;
     }
@@ -123,11 +102,23 @@ public class NDFA {
         return "FINAL_STATE_" + Instant.now();
     }
 
+    private State next(final State state, final String token) {
+        final Set<Situation> next = new HashSet<>();
+        for (final Situation situation: state.situations) {
+            if (situation.getCurrent() != null && situation.getCurrent().equals(token)) {
+                next.add(situation.increase());
+            }
+        }
+        if (next.isEmpty()) {
+            return null;
+        }
+        return new State(eps(next));
+    }
         
     public ParserRule from(final List<String> seq, final Token next) {
         State current = startState;
         for (final String string: seq) {
-            current = current.map.get(string);
+            current = next(current, string);
             if (current == null) {
                 return null;
             }
@@ -143,8 +134,7 @@ public class NDFA {
     }
 
 
-
-    private record State(Set<Situation> situations, Map<String, State> map) {
+    private record State(Set<Situation> situations) {
         @Override
         public boolean equals(final Object obj) {
             if (obj instanceof State other) {
@@ -153,6 +143,8 @@ public class NDFA {
             return false;
         }
     }
+
+    private record SituationCore(int index, ParserRule rule) {}
     private record Situation(int index, ParserRule rule, Set<LexerRule> lookAhead) {
 
         public String getCurrent() {
@@ -162,6 +154,9 @@ public class NDFA {
             return rule.rules().get(index);
         }
 
+        public SituationCore core() {
+            return new SituationCore(index, rule);
+        }
         public List<String> getTail() {
             if (index >= rule.rules().size() - 1) {
                 return List.of();
@@ -170,6 +165,9 @@ public class NDFA {
         }
 
         public boolean isComplete() {
+            if (rule.rules().size() == 1 && rule.rules().get(0).equals("EPS")) {
+                return true;
+            }
             return index == rule.rules().size();
         }
 

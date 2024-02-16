@@ -1,0 +1,45 @@
+digraph {
+a0[label="s"]
+a1[label="FOR"]
+a2[label="LP"]
+a3[label="a"]
+a4[label="VAR"]
+a5[label="VAR"]
+a6[label="EQ"]
+a7[label="NUM"]
+a8[label="SEMICOLON"]
+a9[label="b"]
+a10[label="VAR"]
+a11[label="z"]
+a12[label="LESS_THAN"]
+a13[label="e"]
+a14[label="EQ"]
+a15[label="NUM"]
+a16[label="SEMICOLON"]
+a17[label="c"]
+a18[label="VAR"]
+a19[label="op"]
+a20[label="INC"]
+a21[label="RP"]
+a0 -> a1;
+a3 -> a4;
+a9 -> a10;
+a11 -> a12;
+a13 -> a14;
+a17 -> a18;
+a19 -> a20;
+a0 -> a2;
+a3 -> a5;
+a9 -> a11;
+a11 -> a13;
+a17 -> a19;
+a0 -> a3;
+a3 -> a6;
+a3 -> a7;
+a9 -> a15;
+a0 -> a8;
+a0 -> a9;
+a0 -> a16;
+a0 -> a17;
+a0 -> a21;
+}

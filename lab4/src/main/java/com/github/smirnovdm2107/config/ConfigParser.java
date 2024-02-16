@@ -124,6 +124,7 @@ public class ConfigParser {
 
         private ConfigToken expectTokenType(final ConfigTokenType type) throws IOException, ParseException {
             if (lexer.currentToken().tokenType() != type) {
+                System.err.println(lexer.currentToken());
                 throw new ParseException("expected token type " + type, lexer.currentPos());
             }
             return lexer.nextToken();

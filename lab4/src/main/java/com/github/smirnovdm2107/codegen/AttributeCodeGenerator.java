@@ -77,11 +77,10 @@ public class AttributeCodeGenerator {
                         .append(LINE_SEPARATOR);
                 String currentCode = rule.codeBlock();
                 final List<String> subRules = rule.rules();
-                currentCode = currentCode.replace("$" + 0 + ".",
-                        "((" + getContextClassName(rule.name()) + ")" + "contexts.get(" + 0 + ")).");
-                for (int j = 1; j < subRules.size() + 1; j++) {
-                    currentCode = currentCode.replace("$" + j + ".",
-                            "((" + getContextClassName(subRules.get(j - 1)) + ")" + "contexts.get(" + j + ")).");
+                for (int j = 0; j < subRules.size() + 1; j++) {
+                    final String current = j == 0 ? rule.name() : subRules.get(j - 1);
+                    currentCode = currentCode.replaceAll("\\$" + (j) + "\\.",
+                            "((" + getContextClassName(current) + ")" + "contexts.get(" + j + ")).");
                 }
                 sb.append(TAB)
                         .append(TAB)
